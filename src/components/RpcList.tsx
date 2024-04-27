@@ -1,18 +1,3 @@
-import { Dialog, DialogConfirm, DialogContent, DialogOpen } from './Dialog';
-import './app.css'
-import { NumberPreview } from './components/NumberPreview';
-import { wait } from './utils';
-
-type ConfirmAction = Parameters<typeof Dialog>[0]['onConfirm']
-
-export function App() {
-  return (
-    <div class='previewer'>
-      <NumberPreview />
-    </div>
-  )
-}
-
 export const AddRpcConnection = () => {
   const handleConfirm: ConfirmAction = async (dialog) => {
     console.log(dialog.data.get('hey'))

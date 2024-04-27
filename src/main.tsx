@@ -1,6 +1,7 @@
 import { render } from 'preact'
+import { AppRouter } from './components/AppRouter';
 import './index.css'
+import './app.css'
 
-import { App } from './app.tsx'
-
-render(<App />, document.getElementById('app')!)
+const rootElement = document.getElementById('app')!
+render(<AppRouter />, rootElement)
