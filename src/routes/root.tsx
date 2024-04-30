@@ -9,4 +9,5 @@ export const routeTree = rootRoute.addChildren([
 	routes.numbersRoute,
 	routes.indexRoute,
 	routes.rpcRoute,
+	routes.kitchenSinkRoute,
 ])

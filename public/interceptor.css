@@ -38,15 +38,15 @@
 	--modal-background-color: rgba(10, 10, 10, .7)
 }
 
-button {
+button:where(:not(.btn)) {
 	background-color: var(--primary-color);
 }
 
-button:hover {
+button:where(:not(.btn)):hover {
 	background-color: var(--highlighted-primary-color);
 }
 
-button:disabled, button[disabled] {
+button:where(:not(.btn):disabled, button[disabled]) {
 	background-color: var(--disabled-primary-color);
 	border-color: transparent;
 }
@@ -198,7 +198,7 @@ html, body {
 	box-shadow: none;
  }
 
-.input:not([type='checkbox']):disabled, input:not([type='checkbox'])[disabled] {
+:where(.input:not([type='checkbox']):disabled, input:not([type='checkbox'])[disabled]) {
 	border-bottom: unset
 }
 

@@ -9,11 +9,11 @@ type DialogContext = {
 
 const DialogContext = createContext<DialogContext | undefined>(undefined)
 
-type DialogCallbackPayload = { 
+type DialogCallbackPayload = {
   data: FormData
   closeDialog: () => void
   disabled: Signal<boolean>
-  event: SubmitEvent 
+  event: SubmitEvent
 }
 
 type DialogProps = {
@@ -83,18 +83,21 @@ export const DialogContent = ({ children }: { children: ComponentChildren }) => 
 }
 
 type DialogOpenProps = Pick<JSX.HTMLAttributes<HTMLButtonElement>, 'class' | 'style'> & { children: ComponentChildren }
+
 export const DialogOpen = ({ children, ...props}: DialogOpenProps) => {
   const { ref } = useDialog()
   return <button type='button' {...props} onClick={ () => ref.current?.showModal() }>{ children }</button>
 }
 
 type DialogConfirmProps = Pick<JSX.HTMLAttributes<HTMLButtonElement>, 'class' | 'style'> & { children: ComponentChildren }
+
 export const DialogConfirm = ({ children, ...props }: DialogConfirmProps) => {
   const { disabled } = useDialog()
   return <button type='submit' {...props} value='dialog-confirm' disabled={disabled.value}>{ children }</button>
 }
 
 type DialogResetProps = Pick<JSX.HTMLAttributes<HTMLButtonElement>, 'class' | 'style'> & { children: ComponentChildren }
+
 export const DialogReset = ({ children, ...props }: DialogResetProps) => {
   const { disabled } = useDialog()
   return <button type='submit' {...props} value='dialog-reset' disabled={disabled.value}>{ children }</button>

@@ -1,3 +1,4 @@
+export * from './kitchen-sink'
 export * from './rpc'
 export * from './numbers'
 export * from './home'

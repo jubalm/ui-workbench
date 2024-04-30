@@ -1,3 +1,4 @@
+import { useComputed, useSignal, useSignalEffect } from "@preact/signals";
 import { ethers } from "ethers";
 
 export const wait = (milliseconds: number) => new Promise((resolve) => {
@@ -47,3 +48,31 @@ export const bigintToRoundedPrettyDecimalString = (amount: bigint, decimals?: bi
 
 	return numberString
 }
+
+export function useDebouncedSignal<T extends any>(defaultValue: T) {
+	const initialValue = useSignal(defaultValue)
+	const debouncedValue = useSignal(defaultValue)
+	let timeout: number;
+
+	useSignalEffect(() => {
+		const newValue = initialValue.value
+		window.clearTimeout(timeout);
+		timeout = window.setTimeout(() => {
+			debouncedValue.value = newValue
+		}, 1000)
+	})
+
+	return { initialValue, debouncedValue }
+}
+
+export type RpcEntry = {
+	readonly name: string;
+	readonly chainId: bigint;
+	readonly httpsRpc: string;
+	readonly currencyName: string;
+	readonly currencyTicker: string;
+	readonly primary: boolean;
+	readonly minimized: boolean;
+	readonly weth: bigint;
+}
+

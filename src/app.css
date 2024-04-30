@@ -2,23 +2,28 @@ html, body {
 	background: var(--bg-color);
 }
 
-button.btn {
-	--o-justify: var(--btn-justify, center);
-	--o-bg: var(--btn-bg-color, gray);
-	--o-fg: var(--btn-text-color, var(--text-color));
-	--o-size: var(--btn-text-size , 1em);
-	--o-outline: var(--btn-outline, 1px solid transparent);
-	--o-brightness: var(--btn-brightness, 1);
-	--o-saturation: var(--btn-saturation, 1);
-	--o-contrast: var(--btn-contrast, 1);
-	all: revert;
-	background-color: var(--o-bg);
-	color: var(--o-fg, var(--text-color));
-	font-size: var(--o-size);
-	border: var(--o-outline);
-	filter: saturate(var(--o-saturation)) brightness(var(--o-brightness));
-	justify-content: var(--o-justify);
-	height: calc(var(--o-size) * 2.25);
+html { font-size: 100%; }
+
+/* TODO: remove bulma dependency */
+strong { color: inherit }
+
+button:is(:not(.button), .btn) {
+	--s-justify: var(--btn-justify, center);
+	--s-bg: var(--btn-bg-color, gray);
+	--s-fg: var(--btn-text-color, var(--text-color));
+	--s-size: var(--btn-text-size , 1em);
+	--s-outline: var(--btn-outline, 1px solid transparent);
+	--s-brightness: var(--btn-brightness, 1);
+	--s-saturation: var(--btn-saturation, 1);
+	--s-contrast: var(--btn-contrast, 1);
+	font: inherit;
+	background-color: var(--s-bg);
+	color: var(--s-fg, var(--text-color));
+	font-size: var(--s-size, inherit);
+	border: var(--s-outline);
+	filter: saturate(var(--s-saturation)) brightness(var(--s-brightness));
+	justify-content: var(--s-justify);
+	height: 2.25em;
 	padding: 0 0.75em;
 	border-radius: 4px;
 	cursor: pointer;
@@ -29,151 +34,203 @@ button.btn {
 
 .btn:disabled { cursor: not-allowed; --btn-brightness: 0.6; --btn-saturation: 0.2 }
 .btn:not(:disabled):hover { --btn-brightness: 1.25 }
-.btn:not(:disabled):focus { --btn-outline: 1px solid var(--o-fg) }
+.btn:not(:disabled):focus { --btn-outline: 1px solid var(--s-fg) }
 
 /* Primary Button */
-.btn.btn--primary { --btn-bg-color: var(--primary-color) }
-.btn.btn--primary:not(:disabled):hover { --btn-saturation: 1.5 }
+.btn--primary { --btn-bg-color: var(--primary-color) }
+.btn--primary:not(:disabled):hover { --btn-saturation: 1.5 }
 
 /* Danger Button */
-.btn.btn--destructive { --btn-bg-color: var(--negative-color) }
-.btn.btn--destructive:not(:disabled):hover { --btn-saturation: 1.5 }
+.btn--destructive { --btn-bg-color: var(--negative-color) }
+.btn--destructive:not(:disabled):hover { --btn-saturation: 1.5 }
 
-.btn.btn--outline {
+.btn--outline {
 	--btn-bg-color: transparent;
-	--btn-text-color: white;
 	--btn-outline: 1px solid #ffffff20;
 }
 
-.btn.btn--outline:hover:not(:disabled) { --btn-bg-color: #ffffff10 }
+.btn--outline:hover:not(:disabled) { --btn-bg-color: #ffffff10 }
+.btn--ghost { --btn-bg-color: transparent; }
+.btn--ghost:hover:not(:disabled) { --btn-bg-color: #ffffff10; }
+
+
+:where(.actions:has(.btn), .flex) {
+	--gap-x: 0.5rem;
+	--justify: end;
+	column-gap: var(--gap-x);
+	justify-content: var(--justify);
+	display: flex;
+}
+
+/* Default styles for details element */
+
+details {
+	--s-text-size: var(--text-size, 0.85rem);
+	--s-base-color: color(from var(--text-color) srgb 0.4 0.4 0.4);
+	--s-icon-order: var(--icon-order);
+	--s-rule-color: transparent;
+	outline: none;
+}
+
+summary {
+	color: var(--s-base-color);
+	font-size: var(--s-text-size);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	outline: none;
+}
+
+summary:hover {
+	--s-base-color: color(from var(--text-color) srgb 0.6 0.6 0.6);
+	--s-rule-color: currentColor;
+}
+
+summary:focus {
+	--s-base-color: var(--text-color);
+}
+
+summary:after {
+	content: ' ';
+	margin: 0;
+	flex-grow: 1;
+	border-bottom: 1px solid var(--s-rule-color);
+}
+
+summary:where(details[open] > *) {
+	--s-rule-color: currentColor;
+}
+
+.svg-icon {
+	--s-rotate: var(--icon-rotate, 0deg);
+	--s-size: var(--icon-size, 1em);
+	/* avoid conflicts with other .icon classes */
+	all: revert;
+	fill: none;
+	display: block;
+	transition: transform 150ms;
+	width: var(--s-size);
+	height: var(--s-size);
+	transform: rotate(var(--s-rotate));
+}
+
+/* Fix svg sub-pixel rendering for icons */
+.svg-icon *:where(path, rect) { shape-rendering: geometicprecision }
+
+.svg-icon:where(details:not([open]) .details--arrow) { --icon-rotate: -90deg }
+
+:where(.grid, .flex) {
+	--gap-y: 0;
+	--gap-x: 0;
+	--align-items: center;
+	align-items: var(--align-items, center);
+	column-gap: var(--gap-x);
+}
+
+:where(.grid) {
+	--grid-cols: auto;
+	display: grid;
+	row-gap: var(--gap-y);
+	grid-template-columns: var(--grid-cols);
+}
+
+:where(.flex) { display: flex }
+
+:where(.grid > *) {
+	--area: auto;
+	grid-area: var(--area);
+}
+
+.brief {
+	--grid-cols: 1fr max-content;
+	--gap-x: 1rem;
+	--hl-color: white;
+	background-color: color(from var(--bg-color) srgb .25 .25 .25);
+	color: color(from var(--text-color) srgb .6 .6 .6);
+	font-size: var(--text-size, inherit);
+	font-weight: var(--font-weight, normal);
+	padding: 0.5rem 1em;
+	border-radius: 4px;
+	margin: 0;
+}
+
+.brief strong { color: var(--hl-color) }
+
+.brief .btn { --s-size: 0.8rem; }
 
 .dialog {
+	background: var(--bg-color);
+	color: var(--text-color);
+	border: 0 none;
   padding: 1em;
   border-radius: 6px;
+	width: calc(100vw - 4em);
+	max-width: 36em;
 }
 
-.dialog-actions {
-  display: grid;
-  place-items: end;
-  grid-template-columns: max-content max-content;
+.dialog header { display: grid; }
+
+.dialog::backdrop {
+	background: #00000090;
+	backdrop-filter: blur(1px);
 }
 
-.dlist {
-  --dd-text-color: #ffffff;
-  --dt-text-color: #ffffff50;
-  --dt-size: 0.8em;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 1em;
-  background: #00000020;
-  border-radius: 4px;
-}
-.dlist > div {
-  padding: 0.5em;
-}
-
-.dlist dd { color: var(--dd-text-color) }
-.dlist dt {
-  color: var(--dt-text-color);
-  font-size: var(--dt-size);
-}
-
-.metadata {
-  --x-dl-bg: var(--dl-bg)
-  --x-dt-color: var(--dt-color);
-  --x-dd-color: var(--dd-color);
-  --x-dd-size: var(--dd-size);
-  background: var(--x-dl-bg, #00000020);
-  padding: 1em 1.2em;
-  border-radius: 4px;
-}
-
-.metadata dt {
-  color: var(--x-dt-color, #ffffff50);
-  font-size: 0.8em;
-}
-
-.metadata dd {
-  color: var(--x-dd-color, #ffffff);
-  font-weight: 600;
-  padding-bottom: 0.75em;
-}
-
-.metadata--rpc {
-	--dl-bg: red;
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(6, min-content);
-  grid-template-columns: max-content max-content;
-}
-
-.metadata--rpc dt:first-of-type { grid-column: span 2 }
-.metadata--rpc dd:first-of-type { grid-column: span 2 }
-.metadata--rpc dt:nth-of-type(1n+4) { text-align: right }
-.metadata--rpc dd:nth-of-type(1n+4) { text-align: right }
-
-.split-section {
-	--fg-color: #ffffff30;
-	--label-size: 0.9em;
-	color: var(--fg-color);
-	font-size: var(--label-size);
+.text-input {
+	--text-size: 1em;
+	--label-color: color(from var(--text-color) srgb .3 .3 .3);
+	--border-color: color(from var(--text-color) srgb .4 .4 .4);
+	--columns: 1fr min-content;
 	display: grid;
-	grid-template-columns: max-content 1fr;
-	gap: 0.5em;
-	align-items: center;
-	padding: 1em;
-}
-
-.split-section hr {
-	margin: 0;
-	background-color: var(--fg-color);
-	height: 1px;
-}
-
-.listing {
-	--c-item-bg-color: var(--list-item-bg-color, #ffffff10);
-	--c-text-color: var(--list-text-color, #ffffff80);
-	--c-text-size: var(--list-text-size, 0.85rem);
-	display: grid;
-	row-gap: 0.4em;
-	padding: 0 1em;
-}
-
-.listing li {
-	background: var(--c-item-bg-color);
-	align-items: center;
-	margin: 0;
-	border-radius: 4px;
-}
-
-.listing dd {
-	color: var(--c-text-color);
-	font-size: var(--c-text-size);
-}
-
-.listing.listing--rpc li {
-	display: grid;
-	grid-template-columns: 1fr max-content;
-	column-gap: 1em;
-	padding: 0.5em 1em;
-}
-.listing.listing--rpc dl {
-	display: grid;
-	grid-template-columns: 1fr max-content;
-	grid-auto-flow: row;
+	grid-template-columns: var(--columns);
+	border-bottom: 1px solid var(--border-color);
 	align-items: center;
 }
-.listing.listing--rpc dt { display: none }
-.listing.listing--rpc dd:first-of-type {
-	font-weight: bold;
-	color: #ffffff;
-	font-size: 1rem;
-}
-.listing.listing--rpc dd:nth-child(4) {
-	grid-row: span 2 / span 2;
+
+.text-input:focus-within { --border-color: white }
+
+.text-input > input {
+	font: inherit;
+	grid-area: 2 / 1;
+	background-color: var(--bg-color, transparent);
+	color: var(--text-color);
+	outline: none;
+	padding: 0.2em 0;
+	border: 0 none;
 }
 
-.listing.listing--rpc .btn {
-	--btn-text-size: 0.75rem;
-	font-weight: bold;
+/* remove browser autofill styles */
+.text-input > input:where(:-internal-autofill-selected, :autofill) {
+	background-clip: text;
+	-webkit-text-fill-color: var(--text-color, initial);
+}
+
+.text-input > input::placeholder { color: transparent; }
+
+.text-input > input:where(:disabled, :read-only) { --text-color: var(--border-color) }
+
+:where(.text-input:has(input) > span) {
+	grid-area: 1 / span 2;
+	color: var(--label-color);
+	transform-origin: bottom left;
+	transition: transform 150ms;
+	transform: translateY(1.525em);
+}
+
+:where(.text-input:focus-within span, .text-input input:not(:placeholder-shown) + span) {
+	transform: translateY(0) scale(0.75);
+	--label-color: color(from var(--text-color) srgb .5 .5 .5);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
