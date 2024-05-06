@@ -1,3 +1,4 @@
+import { forwardRef } from 'preact/compat'
 import { JSX } from 'preact/jsx-runtime'
 
 type TextInputProps = JSX.HTMLAttributes<HTMLInputElement> & {
@@ -6,12 +7,12 @@ type TextInputProps = JSX.HTMLAttributes<HTMLInputElement> & {
 	style?: JSX.HTMLAttributes<HTMLDivElement>['style']
 }
 
-export const TextInput = ({ label, name, statusIcon, style, ...props }: TextInputProps) => {
+export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(({ label, name, statusIcon, style, ...props }: TextInputProps, ref) => {
 	return (
 		<label class = 'text-input' style = { style }>
-			<input id={ name } name={ name } placeholder={ label } { ...props } />
+			<input ref={ref} id={ name } name={ name } placeholder={ label } { ...props } />
 			<span>{ label }</span>
 			{ statusIcon }
 		</label>
 	)
-}
+})

@@ -208,6 +208,7 @@ summary:where(details[open] > *) {
 .text-input > input::placeholder { color: transparent; }
 
 .text-input > input:where(:disabled, :read-only) { --text-color: var(--border-color) }
+.text-input > input:where(:invalid) { --text-color: var(--negative-color) }
 
 :where(.text-input:has(input) > span) {
 	grid-area: 1 / span 2;

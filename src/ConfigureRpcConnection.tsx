@@ -1,11 +1,9 @@
-import { type ComponentChildren  } from 'preact'
-import { useComputed, useSignal } from '@preact/signals'
-import { useRef } from 'preact/hooks'
-import { useQueryRpc } from './components/RpcFetcher'
-import { AsyncStates } from './lib/preact.utils'
+import { createContext, type ComponentChildren } from 'preact'
+import { Signal, useComputed, useSignal, useSignalEffect } from '@preact/signals'
+import { useContext, useRef } from 'preact/hooks'
+import { AsyncStates, useAsyncState } from './lib/preact.utils'
 import { TextInput } from './components/TextInput'
 import { RpcEntry } from './utils'
-import { CHAIN_NAMES } from './lib/chain-names.utils'
 
 type ParsedData = { success: true, value: RpcEntry } | { message: string }
 
@@ -13,15 +11,54 @@ const parseData = (entry: RpcEntry) => {
 	return { success: true, value: entry } satisfies ParsedData
 }
 
+type EthChainIdResponse = {
+	id: string | null,
+	jsonrpc: number,
+	result: `0x${string}`
+}
+
+type ConfigureRpcContext = {
+	asyncQueryRpc: ReturnType<typeof useAsyncState<EthChainIdResponse>>['value']
+	rpcInfo: Signal<Partial<RpcEntry>>
+}
+
+const ConfigureRpcContext = createContext<ConfigureRpcContext | undefined>(undefined)
+
+const ConfigureRpcProvider = ({ children }: { children: ComponentChildren }) => {
+	const rpcInfo = useSignal<Partial<RpcEntry>>({})
+	const { value: asyncQueryRpc, waitFor, reset } = useAsyncState<EthChainIdResponse>()
+
+	const fetchRpcInfo = (url: string) => waitFor(async () => {
+		const requestBody = JSON.stringify({ method: 'eth_chainId', params: [], jsonrpc: '2.0' })
+		const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: requestBody })
+		if (!response.ok) throw new Error(`Could not connect to RPC server ${url}`)
+		return await response.json()
+	})
+
+	const rpcUrl = useComputed(() => rpcInfo.value.httpsRpc)
+
+	useSignalEffect(() => {
+		if (asyncQueryRpc.value.state !== 'resolved') return
+		const chainId = BigInt(asyncQueryRpc.value.value.result)
+		rpcInfo.value = { ...rpcInfo.peek(), chainId }
+	})
+
+	useSignalEffect(() => {
+		if (!rpcUrl.value) { reset(); return }
+		fetchRpcInfo(rpcUrl.value)
+	})
+
+	return <ConfigureRpcContext.Provider value = { { asyncQueryRpc, rpcInfo } }>{ children }</ConfigureRpcContext.Provider>
+}
+
+function useConfigureRpc() {
+	const context = useContext(ConfigureRpcContext)
+	if (!context) throw new Error('useConfigureRpc can only be used within children of ConfigureRpcProvider')
+	return context
+}
+
 export const ConfigureRpcConnection = ({ rpcInfo }: { rpcInfo?: RpcEntry | undefined }) => {
 	const modalRef = useRef<HTMLDialogElement>(null)
-	const formError = useSignal<string | undefined>(undefined)
-	const { queryValue, setRpcUrlToQuery } = useQueryRpc()
-
-	const verifyRpcInfoFromInput = (event: InputEvent) => {
-		if (!(event.target instanceof HTMLInputElement)) return
-		setRpcUrlToQuery(event.target.value)
-	}
 
 	const verifyInputsAndSave = (event: Event) => {
 		// Preact types can't accept a SubmitEvent type for dialog element's onSubmit so we do a check
@@ -35,7 +72,6 @@ export const ConfigureRpcConnection = ({ rpcInfo }: { rpcInfo?: RpcEntry | undef
 
 		// a form with `dialog` method within dialog element should have called this event
 		if (event.target instanceof HTMLFormElement) {
-			console.log('form??', event.target)
 			const formData = new FormData(event.target)
 			const newRpcEntry = {
 				name: formData.get('name') as string,
@@ -65,66 +101,91 @@ export const ConfigureRpcConnection = ({ rpcInfo }: { rpcInfo?: RpcEntry | undef
 	}
 
 	const showSetupInterface = () => modalRef.current?.showModal()
-	const clearErrors = () => { formError.value = undefined }
-
-	const isFormBusy = useComputed(() => queryValue.value.state === 'pending')
-
-	const computedChainInfo = useComputed(() => {
-		if (queryValue.value.state !== 'resolved') return undefined
-
-		// get chain info from dictionary
-		if (!queryValue.value.value) return undefined
-
-		return {
-			chainId: BigInt(queryValue.value.value.result),
-			networkName: 'Placeholder name',
-			currencyName: 'Ether',
-			currencyTicker: 'ETH',
-		}
-	})
-
-	const getChainNameFromId = (chainId: bigint) => {
-		return CHAIN_NAMES.get(chainId.toString())
-	}
 
 	return (
 		<>
-			<button type = 'button' onClick = { showSetupInterface } class = 'btn btn--outline'>{ rpcInfo ? 'Edit' : '+ New RPC Connection'}</button>
+			<button type = 'button' onClick = { showSetupInterface } class = 'btn btn--outline'>{ rpcInfo ? 'Edit' : '+ New RPC Connection' }</button>
 			<dialog class = 'dialog' ref = { modalRef } onSubmit = { verifyInputsAndSave } >
-				<form method = 'dialog' class = 'grid' style = '--gap-y: 1.5rem'>
-					<header class = 'grid' style = '--grid-cols: 1fr auto'>
-						<span style = { { fontWeight: 'bold', color: 'white' } }>Configure RPC Connection</span>
-						<button type = 'submit' formNoValidate value = 'cancel' class = 'btn btn--ghost' aria-label = 'close'>
-							<span class = 'button-icon' style = { { fontSize: '1.5em' } }>&times;</span>
-						</button>
-					</header>
-
-					<main class = 'grid' style = '--gap-y: 0.5rem'>
-						<p>Interceptor will automatically verify the RPC URL you provide and attempt to fill relevant information. Feel free to adjust the pre-populated details to your preference.</p>
-
-						<div class = 'grid' style = '--grid-cols: 1fr 1fr; --gap-x: 1rem; --gap-y: 0.5rem;' >
-							<TextInput label = 'RPC URL *' name = 'httpsRpc' defaultValue = { rpcInfo?.httpsRpc } onInput = { verifyRpcInfoFromInput } statusIcon = { <StatusIcon state = { queryValue.value.state } /> } autofocus style = '--area: 1 / span 2' required />
-							<TextInput label = 'Label *' name = 'name' required defaultValue = { rpcInfo?.name } onInput = { clearErrors } style = '--area: 2 / span 2' />
-							<TextInput label = 'Network Name *' name = 'network' defaultValue = { rpcInfo?.chainId ? getChainNameFromId(rpcInfo.chainId) : undefined } onInput = { clearErrors } disabled = { isFormBusy.value } required />
-							<TextInput label = 'Chain ID *' name = 'chainId' defaultValue = { computedChainInfo.value?.chainId.toString() || rpcInfo?.chainId.toString() } required onInput = { clearErrors } readOnly />
-							<TextInput label = 'Currency Name *' name = 'currencyName' defaultValue = { rpcInfo?.currencyName } onInput = { clearErrors } disabled = { isFormBusy.value } required />
-							<TextInput label = 'Currency Ticker *' name = 'currencyTicker' defaultValue = { rpcInfo?.currencyTicker } onInput = { clearErrors } disabled = { isFormBusy.value } required />
-						</div>
-
-						<p style = '--text-color: gray'><small>* Fields marked with an asterisk (*) are required.</small></p>
-						{ formError.value ? <ErrorInfo>{ formError.value }</ErrorInfo> : <></> }
-					</main>
-
-					<footer>
-						<div class = 'actions' style = '--btn-text-size: 0.9rem'>
-							<button type = 'submit' formNoValidate value = 'cancel' class = 'btn btn--ghost'>Cancel</button>
-							<button type = 'submit' value = 'proceed' class = 'btn btn--primary' disabled = { isFormBusy.value }>Save RPC Connection</button>
-						</div>
-					</footer>
-				</form>
+				<ConfigureRpcProvider>
+					<ConfigureRpcForm />
+				</ConfigureRpcProvider>
 			</dialog>
 		</>
 	)
+}
+
+const ConfigureRpcForm = () => {
+	const { asyncQueryRpc } = useConfigureRpc()
+
+	const chainIdDefault = useComputed(() => {
+		if (asyncQueryRpc.value.state !== 'resolved') return ''
+		return BigInt(asyncQueryRpc.value.value.result).toString()
+	})
+
+	return (
+		<form method = 'dialog' class = 'grid' style = '--gap-y: 1.5rem'>
+			<header class = 'grid' style = '--grid-cols: 1fr auto'>
+				<span style = { { fontWeight: 'bold', color: 'white' } }>Configure RPC Connection</span>
+				<button type = 'submit' formNoValidate value = 'cancel' class = 'btn btn--ghost' aria-label = 'close'>
+					<span class = 'button-icon' style = { { fontSize: '1.5em' } }>&times;</span>
+				</button>
+			</header>
+
+			<main class = 'grid' style = '--gap-y: 0.5rem'>
+				<p>Interceptor will automatically verify the RPC URL you provide and attempt to fill relevant information. Feel free to adjust the pre-populated details to your preference.</p>
+
+				<div class = 'grid' style = '--grid-cols: 1fr 1fr; --gap-x: 1rem; --gap-y: 0' >
+					<RpcUrlField />
+					<TextInput label = 'Label *' name = 'name' style = '--area: 3 / span 2' required />
+					<TextInput label = 'Network Name *' name = 'network' style = '--area: 5 / span 1' disabled = { asyncQueryRpc.value.state === 'pending' } required />
+					<TextInput label = 'Chain ID' name = 'chainId' defaultValue={ chainIdDefault.value } style = '--area: 5 / span 1' required readOnly />
+					<TextInput label = 'Currency Name *' name = 'currencyName' style = '--area: 7 / span 1' required />
+					<TextInput label = 'Currency Ticker *' name = 'currencyTicker' style = '--area: 7 / span 1' required />
+				</div>
+
+				<p style = '--text-color: gray'><small>* Fields marked with an asterisk (*) are required.</small></p>
+			</main>
+
+			<footer>
+				<div class = 'actions' style = '--btn-text-size: 0.9rem'>
+					<button type = 'submit' formNoValidate value = 'cancel' class = 'btn btn--ghost'>Cancel</button>
+					<button type = 'submit' value = 'proceed' class = 'btn btn--primary' disabled = { asyncQueryRpc.value.state === 'pending' }>Save RPC Connection</button>
+				</div>
+			</footer>
+		</form>
+	)
+}
+
+type RpcUrlFieldProps = {
+	defaultValue?: string
+}
+
+const RpcUrlField = ({ defaultValue }: RpcUrlFieldProps) => {
+	const { asyncQueryRpc, rpcInfo } = useConfigureRpc()
+	const inputRef = useRef<HTMLInputElement>(null)
+	const timeout = useSignal<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+	const verifyUrlFromInput = (event: InputEvent) => {
+		if (!(event.target instanceof HTMLInputElement)) return
+		if (timeout.value) clearTimeout(timeout.value)
+		const httpsRpc = event.target.value
+		timeout.value = setTimeout(() => {
+			rpcInfo.value = { ...rpcInfo, httpsRpc }
+		}, 600)
+	}
+
+
+	useSignalEffect(() => {
+		if (!inputRef.current) return
+		if (asyncQueryRpc.value.state === 'rejected') {
+			inputRef.current.setCustomValidity('RPC URL should be reachable')
+			inputRef.current.reportValidity()
+			return
+		}
+		inputRef.current.setCustomValidity('')
+	})
+
+	return <TextInput ref = { inputRef } label = 'RPC URL *' name = 'httpsRpc' defaultValue = { defaultValue } onInput = { verifyUrlFromInput } statusIcon = { <StatusIcon state = { asyncQueryRpc.value.state } /> } autofocus style = '--area: 1 / span 2' required />
 }
 
 export const StatusIcon = ({ state }: { state: AsyncStates }) => {
@@ -134,13 +195,6 @@ export const StatusIcon = ({ state }: { state: AsyncStates }) => {
 		case 'rejected': return <XMark />
 		case 'resolved': return <Check />
 	}
-}
-
-
-const ErrorInfo = ({ children }: { children: ComponentChildren }) => {
-	return (
-		<div style = { { background: 'var(--negative-color)', color: 'white', padding: '8px 16px', borderRadius: 6 } }>{ children }</div>
-	)
 }
 
 export const Spinner = () => (
